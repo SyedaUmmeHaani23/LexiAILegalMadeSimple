@@ -1,0 +1,47 @@
+Build a full-stack AI-powered web application called **LexiAI** with the following features:
+
+1. **Authentication**
+   - Secure Sign-up & Sign-in system (with JWT or Firebase Auth).
+   - Allow users to reset passwords.
+   - Store user data securely.
+
+2. **Document Upload & Analysis**
+   - Users can upload documents (PDF, DOCX, TXT).
+   - Parse and analyze document content (use LangChain / PyPDF2 / pdfplumber).
+   - Provide AI-powered insights, summaries, and keyword extraction.
+   - **Multilingual support**: Detect language automatically and allow analysis in English, Hindi, Kannada, Urdu, and more.
+   - After analysis, allow users to **download the processed document (summary/report) as a PDF**.
+
+3. **Interactive AI Assistant**
+   - After analyzing, users should be able to **chat with the AI assistant about the uploaded document**.
+   - Ensure the “Check AI Assistant with this Analysis” button works.
+   - Maintain document context in chat.
+
+4. **UI/UX**
+   - Modern, bright, responsive interface (Tailwind + ShadCN UI).
+   - Dashboard showing uploaded documents and past analyses.
+   - Animated buttons & progress indicators for uploads and analysis.
+   - Make sure all buttons (especially analysis & chat) are clickable and functional.
+
+5. **Additional Features**
+   - Multilingual chatbot response (based on user document language).
+   - Save past analyses for each user.
+   - Export/download results in multiple formats (PDF, DOCX, TXT).
+   - Error handling for unsupported file types.
+
+6. **README.md**
+   - Project overview, features, tech stack, setup guide.
+   - Screenshots / demo section.
+   - Contribution guidelines.
+   - Contact info:
+     - Developer: **Syeda Umme Haani**
+     - LinkedIn: [https://www.linkedin.com/in/syeda-umme-haani-775a74284/](https://www.linkedin.com/in/syeda-umme-haani-775a74284/)
+
+7. **Tech Stack**
+   - Frontend: React + TailwindCSS + ShadCN UI
+   - Backend: Node.js (Express) / Python Flask (choose best integration with LangChain)
+   - Database: MongoDB / PostgreSQL (for user data & past analyses)
+   - AI/LLM: OpenAI API / HuggingFace Models
+   - File Handling: LangChain, pdfplumber, PyPDF2
+
+Deliver a **fully working project**, not dummy text. Each feature (upload, analysis, chat, multilingual support, export) must work properly. The project should be scaffolded in a way that runs on Replit with minimal setup.

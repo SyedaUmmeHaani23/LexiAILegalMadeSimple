@@ -1,0 +1,226 @@
+📦 React Multilingual Legal AI Template
+1. Install dependencies
+npm install react-router-dom i18next react-i18next i18next-browser-languagedetector firebase
+
+2. Project Structure
+src/
+ ├── i18n.js
+ ├── locales/
+ │    ├── en.json
+ │    ├── hi.json
+ │    └── kn.json
+ ├── components/
+ │    ├── Navbar.js
+ │    ├── Auth.js
+ │    ├── Dashboard.js
+ │    └── Upload.js
+ └── App.js
+
+3. i18n.js
+import i18n from "i18next";
+import { initReactI18next } from "react-i18next";
+import LanguageDetector from "i18next-browser-languagedetector";
+
+import en from "./locales/en.json";
+import hi from "./locales/hi.json";
+import kn from "./locales/kn.json";
+
+i18n
+  .use(LanguageDetector)
+  .use(initReactI18next)
+  .init({
+    resources: {
+      en: { translation: en },
+      hi: { translation: hi },
+      kn: { translation: kn },
+    },
+    lng: "en",
+    fallbackLng: "en",
+    interpolation: { escapeValue: false },
+  });
+
+export default i18n;
+
+4. locales/en.json
+{
+  "app_name": "LexiAI",
+  "login": "Login",
+  "signup": "Sign Up",
+  "logout": "Log out",
+  "email": "Email",
+  "password": "Password",
+  "welcome": "Welcome back, {{name}}!",
+  "upload_doc": "Upload Document",
+  "analyze": "Analyze",
+  "ai_result": "AI Legal Analysis",
+  "docs_analyzed": "Documents Analyzed"
+}
+
+5. locales/hi.json
+{
+  "app_name": "LexiAI",
+  "login": "लॉगिन",
+  "signup": "साइन अप",
+  "logout": "लॉग आउट",
+  "email": "ईमेल",
+  "password": "पासवर्ड",
+  "welcome": "वापसी पर स्वागत है, {{name}}!",
+  "upload_doc": "दस्तावेज़ अपलोड करें",
+  "analyze": "विश्लेषण करें",
+  "ai_result": "एआई कानूनी विश्लेषण",
+  "docs_analyzed": "विश्लेषित दस्तावेज़"
+}
+
+6. locales/kn.json
+{
+  "app_name": "LexiAI",
+  "login": "ಲಾಗಿನ್",
+  "signup": "ಸೈನ್ ಅಪ್",
+  "logout": "ಲಾಗ್ ಔಟ್",
+  "email": "ಇಮೇಲ್",
+  "password": "ಪಾಸ್ವರ್ಡ್",
+  "welcome": "ಮತ್ತೆ ಸ್ವಾಗತ, {{name}}!",
+  "upload_doc": "ಡಾಕ್ಯುಮೆಂಟ್ ಅಪ್‌ಲೋಡ್ ಮಾಡಿ",
+  "analyze": "ವಿಶ್ಲೇಷಿಸಿ",
+  "ai_result": "ಎಐ ಕಾನೂನು ವಿಶ್ಲೇಷಣೆ",
+  "docs_analyzed": "ವಿಶ್ಲೇಷಿಸಲಾದ ಡಾಕ್ಯುಮೆಂಟ್‌ಗಳು"
+}
+
+7. Navbar.js
+import React from "react";
+import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
+
+function Navbar({ onLogout }) {
+  const { i18n, t } = useTranslation();
+
+  return (
+    <nav className="flex justify-between bg-blue-600 text-white p-4">
+      <h2 className="font-bold">{t("app_name")}</h2>
+      <div className="flex gap-4">
+        <select
+          onChange={(e) => i18n.changeLanguage(e.target.value)}
+          value={i18n.language}
+          className="text-black p-1 rounded"
+        >
+          <option value="en">English</option>
+          <option value="hi">हिंदी</option>
+          <option value="kn">ಕನ್ನಡ</option>
+        </select>
+        <button onClick={onLogout}>{t("logout")}</button>
+      </div>
+    </nav>
+  );
+}
+
+export default Navbar;
+
+8. Auth.js
+import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
+
+function Auth({ onAuth }) {
+  const { t } = useTranslation();
+  const [isLogin, setIsLogin] = useState(true);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onAuth({ name: "Syeda" }); // Mock login
+  };
+
+  return (
+    <div className="flex flex-col items-center justify-center h-screen">
+      <h1>{isLogin ? t("login") : t("signup")}</h1>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-2">
+        <input type="email" placeholder={t("email")} className="border p-2" />
+        <input type="password" placeholder={t("password")} className="border p-2" />
+        <button type="submit" className="bg-blue-600 text-white p-2">
+          {isLogin ? t("login") : t("signup")}
+        </button>
+      </form>
+      <button onClick={() => setIsLogin(!isLogin)} className="mt-2 text-blue-600">
+        {isLogin ? t("signup") : t("login")}
+      </button>
+    </div>
+  );
+}
+
+export default Auth;
+
+9. Dashboard.js
+import React from "react";
+import { useTranslation } from "react-i18next";
+
+function Dashboard({ user }) {
+  const { t } = useTranslation();
+  return (
+    <div className="p-6">
+      <h1 className="text-xl font-bold">{t("welcome", { name: user.name })}</h1>
+      <p>{t("docs_analyzed")}: 0</p>
+    </div>
+  );
+}
+
+export default Dashboard;
+
+10. Upload.js
+import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
+
+function Upload() {
+  const { t } = useTranslation();
+  const [file, setFile] = useState(null);
+  const [result, setResult] = useState("");
+
+  const handleUpload = () => {
+    if (!file) return;
+    setResult(`${t("ai_result")}: Dummy simplified summary here...`);
+  };
+
+  return (
+    <div className="p-6">
+      <h2>{t("upload_doc")}</h2>
+      <input type="file" onChange={(e) => setFile(e.target.files[0])} />
+      <button onClick={handleUpload} className="bg-green-600 text-white p-2 mt-2">
+        {t("analyze")}
+      </button>
+      {result && <p className="mt-4">{result}</p>}
+    </div>
+  );
+}
+
+export default Upload;
+
+11. App.js
+import React, { useState } from "react";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import "./i18n";
+import Navbar from "./components/Navbar";
+import Auth from "./components/Auth";
+import Dashboard from "./components/Dashboard";
+import Upload from "./components/Upload";
+
+function App() {
+  const [user, setUser] = useState(null);
+
+  return (
+    <BrowserRouter>
+      {user ? (
+        <>
+          <Navbar onLogout={() => setUser(null)} />
+          <Routes>
+            <Route path="/" element={<Dashboard user={user} />} />
+            <Route path="/upload" element={<Upload />} />
+          </Routes>
+        </>
+      ) : (
+        <Auth onAuth={setUser} />
+      )}
+    </BrowserRouter>
+  );
+}
+
+export default App;
+
+
+✅ Now, when you change language (English/Hindi/Kannada) → the ENTIRE app (auth, dashboard, upload, AI result labels) switches.

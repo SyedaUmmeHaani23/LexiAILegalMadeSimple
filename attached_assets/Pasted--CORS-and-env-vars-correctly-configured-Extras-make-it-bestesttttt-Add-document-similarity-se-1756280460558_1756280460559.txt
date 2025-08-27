@@ -1,0 +1,172 @@
+ CORS and env vars correctly configured.
+
+Extras (make it bestesttttt)
+
+Add document similarity / search: index documents with embeddings (Pinecone or local) so chatbot can reference specific clauses.
+
+Add clause highlighting on document viewer.Download report includes summary and Q&A.
+
+Add role-based summaries: “For a tenant”, “For a lender”, “For investor”.
+
+Add usage limits and throttling to control costs.
+
+Add automated E2E tests for upload → summarize → chat flows.
+
+Final instructions to Replit AI (paste after the above)
+Please scaffold the project with the exact file structure listed. Provide runnable dev servers:
+- Frontend: npm start from /frontend
+- Backend: uvicorn app.main:app --host 0.0.0.0 --port 3000 from /backend
+
+Include:
+- Example locale JSONs: en.json, kn.json, hi.json, es.json (copy about ~20 UI keys).
+- Example FastAPI endpoints with minimal working logic (mock LLM responses but wire up environment variables).
+- A sample README with build/deploy steps and how to configure Netlify + Render.
+- Add comments in code where the developer should add real LLM calls (use env var LLM_API_KEY).
+- Make the Chatbot floating component appear on Home and Dashboard and implement "Start New Conversation" which calls backend to reset session.
+
+
+If you want, I can now:
+
+generate a short README you can paste into your Replit prompt (with exact copy-paste deploy steps),
+ChatGPT said:
+
+Got it ✅ — I’ll write you a short, copy-paste-ready README.md that you can drop straight into your Replit prompt or GitHub repo. It includes:
+
+How to run locally (frontend + backend)
+
+How to deploy (Netlify + Render)
+
+Where to configure environment variables
+
+Quick checklist to verify everything works
+
+📘 README.md — LexiAI (Legal Made Simple)
+⚡ Overview
+
+LexiAI is a multilingual Generative AI legal assistant that allows users to:
+
+📄 Upload and analyze legal documents (PDF, DOCX, scanned images with OCR).
+
+🤖 Get simplified summaries, risks, and obligations in plain language.
+
+💬 Use an integrated chatbot (context-aware, multi-session, multilingual).
+
+🌍 Switch seamlessly between 40+ languages (UI + AI responses).
+
+📑 Download reports with summaries, highlighted clauses, and Q&A.
+
+🗂 Project Structure
+LexiAI/
+├── backend/        # FastAPI backend
+│   ├── app/
+│   │   ├── main.py
+│   │   ├── routes/ (upload.py, summarize.py, chat.py)
+│   │   ├── services/ (ocr_service.py, llm_service.py, translator_service.py)
+│   │   └── models.py
+│   ├── requirements.txt
+│   └── Dockerfile
+├── frontend/       # React frontend
+│   ├── src/
+│   │   ├── components/ (Chatbot.jsx, FileUpload.jsx, LanguageSwitcher.jsx)
+│   │   ├── pages/ (Home.jsx, Dashboard.jsx, Report.jsx)
+│   │   ├── locales/ (en.json, kn.json, hi.json, es.json, …)
+│   │   ├── i18n.js
+│   │   └── App.jsx
+│   └── package.json
+└── README.md
+
+⚙️ Setup (Local Development)
+1. Backend (FastAPI)
+cd backend
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --host 0.0.0.0 --port 3000
+
+
+Runs at: http://localhost:3000
+
+2. Frontend (React + Tailwind)
+cd frontend
+npm install
+npm start
+
+
+Runs at: http://localhost:3001 (or whichever port React picks).
+
+🔑 Environment Variables
+
+Set these in Replit, Render, or Netlify:
+
+LLM_PROVIDER → e.g. openai
+
+LLM_API_KEY → your LLM key
+
+FRONTEND_BASE_URL → e.g. https://lexiai.netlify.app
+
+BACKEND_URL → e.g. https://lexiai-backend.onrender.com
+
+Frontend expects:
+
+REACT_APP_API_URL=https://your-backend-url
+
+🚀 Deployment
+Frontend → Netlify
+
+Push frontend/ to GitHub.
+
+Create new site in Netlify
+.
+
+Build command: npm run build
+
+Publish directory: frontend/build
+
+Add env var: REACT_APP_API_URL=https://your-backend-url
+
+Backend → Render
+
+Push backend/ to GitHub.
+
+Create new Web Service in Render
+.
+
+Build command:
+
+pip install -r requirements.txt
+
+
+Start command:
+
+gunicorn -k uvicorn.workers.UvicornWorker app.main:app --bind 0.0.0.0:$PORT
+
+
+Add environment variables (LLM keys, etc).
+
+✅ QA Checklist
+
+ Upload PDF → extract + summarize.
+
+ Upload scanned doc → OCR fallback works.
+
+ Switch UI to Kannada (or other language) → both UI & AI responses translated.
+
+ Chatbot available on all pages → “Start new conversation” resets session.
+
+ Export/download report includes Q&A + summary.
+
+ CORS works correctly (frontend calls backend).
+
+✨ Extra Features
+
+🔍 Document similarity & search (embeddings).
+
+📌 Clause highlighting in viewer.
+
+👤 Role-based summaries (“Tenant”, “Investor”, etc.).
+
+⏳ Usage limits & throttling.
+
+🧪 E2E tests for upload → summarize → chat.
+
+👉 This README can be pasted directly into Replit AI prompt or into your GitHub repo root.

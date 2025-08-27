@@ -1,0 +1,135 @@
+🔴 Problems You’re Facing in LexiAI Project
+
+Sign-Up / Sign-In Issues
+
+Users not able to register properly (database errors, duplicate users, or no authentication flow).
+
+Login not redirecting properly after success/failure.
+
+No proper password hashing/security.
+
+File Uploading Issues
+
+Users can’t upload files or only certain formats are working.
+
+Large file upload crashes or takes too long.
+
+Uploaded files not stored in the right directory/cloud.
+
+File Analyzing Issues
+
+Backend not processing uploaded files properly.
+
+Incomplete analysis (e.g., not parsing text fully).
+
+Slow response when analyzing large files.
+
+Errors when multiple users upload simultaneously.
+
+Chatbot Issues
+
+Chatbot not responding correctly.
+
+Integration problem between frontend and AI model.
+
+Context lost between multiple messages.
+
+No proper error handling when API/model fails.
+
+UI/UX Issues
+
+Pages not aligned or mobile responsive.
+
+Bright color palette not consistent.
+
+No loading indicators when analysis/chatbot is running.
+
+Navigation between pages confusing.
+
+Authentication & Security
+
+Sessions/tokens not maintained after refresh.
+
+No logout feature.
+
+User data stored insecurely (plain text passwords or unprotected DB).
+
+Deployment Issues
+
+Project runs locally but not on Replit/Vercel/other platforms.
+
+Environment variables (API keys, DB credentials) not set properly.
+
+Storage issues when deploying (e.g., file upload path errors).
+
+🟢 Solutions for Each Problem
+
+Sign-Up / Sign-In
+
+Use JWT or session-based authentication.
+
+Hash passwords with bcrypt before saving to DB.
+
+Validate input fields (email format, strong password).
+
+Redirect properly after login success/failure.
+
+File Uploading
+
+Allow specific formats (.pdf, .docx, .txt).
+
+Set a file size limit and show error if exceeded.
+
+Use cloud storage (AWS S3, Firebase, or Replit DB for small files).
+
+Add progress bar/loading message for UX.
+
+File Analyzing
+
+Use libraries like pdfminer, docx2txt, or pytesseract (for images).
+
+Optimize backend so large files are handled in chunks.
+
+Run analysis in background worker (Celery/RQ) for better performance.
+
+Return clean JSON response for frontend integration.
+
+Chatbot
+
+Use a state management system to maintain context (e.g., storing chat history).
+
+Connect chatbot to an AI API (like OpenAI/GPT) with proper error handling.
+
+Show typing indicator/loading while waiting for response.
+
+Store conversations in DB for continuity.
+
+UI/UX
+
+Use TailwindCSS or Material UI for consistency.
+
+Bright but readable color palette.
+
+Add spinner/loading bar for long processes.
+
+Keep navigation simple (Dashboard → Upload → Analyze → Chat).
+
+Authentication & Security
+
+Use HTTPS (if deploying publicly).
+
+Never store plain text passwords.
+
+Implement Logout to clear tokens/sessions.
+
+Keep API keys in .env files, not hardcoded.
+
+Deployment
+
+Use environment variables for secrets.
+
+For free hosting: use Vercel (frontend) + Render/Heroku (backend).
+
+Set up CORS properly for frontend ↔ backend communication.
+
+Test all features (upload, analyze, chatbot) after deployment.

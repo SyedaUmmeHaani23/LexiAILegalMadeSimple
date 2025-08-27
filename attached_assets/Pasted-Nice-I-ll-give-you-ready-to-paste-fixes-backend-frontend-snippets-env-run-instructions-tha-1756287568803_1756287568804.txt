@@ -1,0 +1,556 @@
+Nice — I’ll give you ready-to-paste fixes (backend + frontend snippets + env / run instructions) that solve the most common causes of the problems you described:
+
+app returning same dummy analysis → fixed by actually saving the uploaded file, extracting text (pdf/docx/ocr) and using that text for summarization (no dummy values);
+
+chat/start new conversation not working → fixed by session creation/reset flow in backend + frontend;
+
+download summary not working → fixed with a simple download endpoint + frontend blob-download fallback;
+
+features gated by authentication → added simple signup/login (JWT) and route protection so only logged-in users can upload/analyze/download;
+
+CORS & env → configured to use FRONTEND_URL env var and instructions for Replit.
+
+Below are copy-paste-ready files and instructions. Paste backend files into backend/app/ on Replit, update requirements.txt, and replace frontend components in frontend/src/components/. After that restart Replit. I kept each file focused and commented so you (or Replit AI) can drop them in easily.
+
+1) Required environment variables (set these in Replit Secrets / Environment)
+SECRET_KEY=your_very_secret_key_here
+FRONTEND_URL=https://your-frontend-url-or-*  # use your Netlify/Vercel or * while testing
+LLM_PROVIDER=openai
+LLM_API_KEY=sk-...
+OCR_TESSDATA_PREFIX=/usr/share/tessdata    # only if using custom tesseract path
+
+2) Backend — Python / FastAPI (copy into backend/app/)
+backend/requirements.txt
+fastapi
+uvicorn[standard]
+python-multipart
+pytesseract
+Pillow
+PyMuPDF
+python-docx
+sqlalchemy
+passlib[bcrypt]
+pyjwt
+openai
+python-dotenv
+
+backend/app/db.py
+# db.py
+from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+import os
+
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./lexiai.db")
+engine = create_engine(
+    DATABASE_URL, connect_args={"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
+)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
+
+backend/app/models.py
+# models.py
+from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, ForeignKey
+from sqlalchemy.orm import relationship
+from datetime import datetime
+from .db import Base
+
+class User(Base):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, unique=True, index=True, nullable=False)
+    hashed_password = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class Document(Base):
+    __tablename__ = "documents"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    filename = Column(String, nullable=False)
+    filepath = Column(String, nullable=False)
+    extracted_text = Column(Text, default="")
+    summary = Column(Text, default="")
+    ocr_used = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User")
+
+backend/app/auth.py
+# auth.py
+from fastapi import Depends, HTTPException, status, Header
+from passlib.context import CryptContext
+from datetime import datetime, timedelta
+from jose import JWTError, jwt
+from sqlalchemy.orm import Session
+from . import models, db
+import os
+
+SECRET_KEY = os.getenv("SECRET_KEY", "devkey")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60*24
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def get_password_hash(pw):
+    return pwd_context.hash(pw)
+
+def verify_password(plain, hashed):
+    return pwd_context.verify(plain, hashed)
+
+def create_access_token(data: dict, expires_delta: timedelta = None):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+def get_db():
+    dbs = db.SessionLocal()
+    try:
+        yield dbs
+    finally:
+        dbs.close()
+
+def get_current_user(authorization: str = Header(None), db: Session = Depends(get_db)):
+    # expects Authorization: Bearer <token>
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Missing authorization header")
+    try:
+        scheme, token = authorization.split()
+        if scheme.lower() != "bearer":
+            raise Exception()
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid auth header")
+    from jose import jwt, JWTError
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = int(payload.get("sub"))
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Could not validate credentials")
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+    return user
+
+
+Note: This simple JWT uses sub claim to store user id.
+
+backend/app/services/ocr_service.py
+# ocr_service.py
+import fitz  # PyMuPDF
+from PIL import Image
+import pytesseract
+from docx import Document as Docx
+import io
+import os
+
+def extract_text_from_pdf(path):
+    text = ""
+    try:
+        doc = fitz.open(path)
+        for page in doc:
+            page_text = page.get_text("text")
+            text += page_text + "\n"
+        return text, False  # text, ocr_used=False
+    except Exception:
+        return "", False
+
+def fallback_ocr_pdf(path, lang=None):
+    text = ""
+    doc = fitz.open(path)
+    for page in doc:
+        pix = page.get_pixmap()
+        img = Image.open(io.BytesIO(pix.tobytes()))
+        if lang:
+            page_text = pytesseract.image_to_string(img, lang=lang)
+        else:
+            page_text = pytesseract.image_to_string(img)
+        text += page_text + "\n"
+    return text, True
+
+def extract_text_from_docx(path):
+    doc = Docx(path)
+    paragraphs = [p.text for p in doc.paragraphs if p.text]
+    return "\n".join(paragraphs)
+
+def extract_text_any(path, filename, ocr_lang=None):
+    ext = os.path.splitext(filename)[1].lower()
+    if ext in [".pdf"]:
+        text, used_ocr = extract_text_from_pdf(path)
+        if not text.strip():
+            # fallback OCR
+            text, used_ocr = fallback_ocr_pdf(path, lang=ocr_lang)
+        return text, used_ocr
+    elif ext in [".docx"]:
+        text = extract_text_from_docx(path)
+        return text, False
+    elif ext in [".png", ".jpg", ".jpeg", ".tiff"]:
+        img = Image.open(path)
+        text = pytesseract.image_to_string(img, lang=ocr_lang) if ocr_lang else pytesseract.image_to_string(img)
+        return text, True
+    else:
+        # plain text fallback
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                return f.read(), False
+        except:
+            return "", False
+
+backend/app/services/llm_service.py
+# llm_service.py
+import os, openai
+
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "openai")
+OPENAI_KEY = os.getenv("LLM_API_KEY")
+
+if LLM_PROVIDER == "openai":
+    openai.api_key = OPENAI_KEY
+
+def summarize_text(text, language="en", max_tokens=400):
+    """
+    Use OpenAI to summarize the text in the requested language.
+    If no real key is present, returns a fallback summary.
+    """
+    if not text or len(text.strip()) == 0:
+        return "No content detected in the uploaded document."
+
+    if LLM_PROVIDER == "openai" and OPENAI_KEY:
+        prompt = f"Summarize the following legal document in {language}. Provide: 1) Short summary, 2) Key clauses, 3) Risks/obligations in simple language.\n\nDocument:\n{text[:30000]}"
+        try:
+            resp = openai.ChatCompletion.create(
+                model="gpt-4o-mini",  # replace with a model you have access to
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=max_tokens
+            )
+            return resp.choices[0].message.content.strip()
+        except Exception as e:
+            return f"[LLM call failed: {e}] Fallback: First 600 chars: {text[:600]}"
+    else:
+        # Fallback local summary (very crude)
+        return text[:1000] + ("\n\n[Truncated — no LLM key configured]" if len(text) > 1000 else "")
+
+backend/app/routes/auth_routes.py
+# auth_routes.py
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+from .. import db, models, auth
+from pydantic import BaseModel
+
+router = APIRouter()
+
+class SignUpSchema(BaseModel):
+    email: str
+    password: str
+
+class LoginSchema(BaseModel):
+    email: str
+    password: str
+
+@router.post("/signup")
+def signup(data: SignUpSchema, dbs: Session = Depends(auth.get_db)):
+    existing = dbs.query(models.User).filter(models.User.email == data.email).first()
+    if existing:
+        raise HTTPException(400, "User already exists")
+    hashed = auth.get_password_hash(data.password)
+    user = models.User(email=data.email, hashed_password=hashed)
+    dbs.add(user); dbs.commit(); dbs.refresh(user)
+    token = auth.create_access_token({"sub": str(user.id)})
+    return {"access_token": token, "token_type": "bearer", "user_id": user.id}
+
+@router.post("/login")
+def login(data: LoginSchema, dbs: Session = Depends(auth.get_db)):
+    user = dbs.query(models.User).filter(models.User.email == data.email).first()
+    if not user or not auth.verify_password(data.password, user.hashed_password):
+        raise HTTPException(400, "Invalid credentials")
+    token = auth.create_access_token({"sub": str(user.id)})
+    return {"access_token": token, "token_type": "bearer", "user_id": user.id}
+
+backend/app/routes/upload_routes.py
+# upload_routes.py
+from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
+from sqlalchemy.orm import Session
+from .. import auth, db, models
+import os, uuid
+from ..services.ocr_service import extract_text_any
+
+router = APIRouter()
+
+UPLOAD_DIR = os.path.join(os.getcwd(), "uploads")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+@router.post("/upload")
+def upload_file(file: UploadFile = File(...), ocr_lang: str = None, user = Depends(auth.get_current_user), dbs: Session = Depends(auth.get_db)):
+    # Save file
+    filename = f"{uuid.uuid4().hex}_{file.filename}"
+    path = os.path.join(UPLOAD_DIR, filename)
+    with open(path, "wb") as f:
+        f.write(file.file.read())
+    # Extract text (PDF/docx/ocr)
+    extracted, ocr_used = extract_text_any(path, file.filename, ocr_lang)
+    # Save document record to DB
+    doc = models.Document(user_id=user.id, filename=file.filename, filepath=path, extracted_text=extracted, ocr_used=ocr_used)
+    dbs.add(doc); dbs.commit(); dbs.refresh(doc)
+    return {"status": "ok", "document_id": doc.id, "extracted_text_preview": extracted[:1000], "ocr_used": ocr_used}
+
+backend/app/routes/summarize_routes.py
+# summarize_routes.py
+from fastapi import APIRouter, Depends, HTTPException, Body
+from sqlalchemy.orm import Session
+from .. import auth, db, models
+from ..services.llm_service import summarize_text
+
+router = APIRouter()
+
+@router.post("/")
+def summarize(doc_id: int = Body(..., embed=True), language: str = Body("en"), dbs: Session = Depends(auth.get_db), user = Depends(auth.get_current_user)):
+    doc = dbs.query(models.Document).filter(models.Document.id == doc_id, models.Document.user_id == user.id).first()
+    if not doc:
+        raise HTTPException(404, "Document not found")
+    summary = summarize_text(doc.extracted_text, language=language)
+    doc.summary = summary
+    dbs.commit()
+    return {"document_id": doc.id, "summary": summary}
+
+backend/app/routes/chat_routes.py (simple)
+# chat_routes.py
+from fastapi import APIRouter, Depends, HTTPException, Body
+from sqlalchemy.orm import Session
+from .. import auth
+from ..services.llm_service import summarize_text
+
+router = APIRouter()
+
+# simple in-memory sessions (replace with DB in production)
+SESSIONS = {}
+
+@router.post("/new")
+def new_session(user = Depends(auth.get_current_user)):
+    import uuid
+    session_id = uuid.uuid4().hex
+    SESSIONS[session_id] = {"messages": [], "user_id": user.id}
+    return {"session_id": session_id}
+
+@router.post("/message")
+def send_message(session_id: str = Body(...), message: str = Body(...), context_doc_id: int = Body(None), language: str = Body("en"), db: Session = Depends(auth.get_db), user = Depends(auth.get_current_user)):
+    # verify session belongs to user if exists
+    sess = SESSIONS.get(session_id)
+    if not sess:
+        raise HTTPException(404, "Session not found")
+    sess["messages"].append({"role":"user","content":message})
+    # for simplicity call LLM summarizer to answer (replace with proper chat pipeline)
+    if context_doc_id:
+        doc = db.query(models.Document).filter(models.Document.id == context_doc_id, models.Document.user_id == user.id).first()
+        doc_text = doc.extracted_text if doc else ""
+    else:
+        doc_text = ""
+    prompt = f"Use the document below to answer the user in {language}:\n\nDocument:\n{doc_text}\n\nUser question:\n{message}"
+    reply = summarize_text(prompt, language=language)
+    sess["messages"].append({"role":"assistant","content":reply})
+    return {"reply": reply}
+
+backend/app/main.py (router registration + startup)
+# main.py
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+import os
+from .db import Base, engine
+from . import models
+
+# create DB tables
+Base.metadata.create_all(bind=engine)
+
+app = FastAPI(title="LexiAI Backend")
+
+FRONTEND_URL = os.getenv("FRONTEND_URL", "*")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[FRONTEND_URL] if FRONTEND_URL != "*" else ["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+from .routes import auth_routes, upload_routes, summarize_routes, chat_routes
+
+app.include_router(auth_routes.router, prefix="/auth")
+app.include_router(upload_routes.router, prefix="/upload")
+app.include_router(summarize_routes.router, prefix="/summarize")
+app.include_router(chat_routes.router, prefix="/chat")
+
+3) Frontend — React snippets to replace the broken parts
+
+Ensure REACT_APP_API_URL is set in Netlify/Replit env or use absolute Replit URL while testing.
+
+frontend/src/api.js
+// api.js
+const API_URL = process.env.REACT_APP_API_URL || "https://your-replit-backend-url";
+
+export async function signup(email, password) {
+  const res = await fetch(`${API_URL}/auth/signup`, {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({email,password})
+  });
+  return res.json();
+}
+
+export async function login(email, password) {
+  const res = await fetch(`${API_URL}/auth/login`, {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({email,password})
+  });
+  return res.json();
+}
+
+export async function uploadFile(file, token, ocr_lang) {
+  const fd = new FormData();
+  fd.append("file", file);
+  if (ocr_lang) fd.append("ocr_lang", ocr_lang);
+  const res = await fetch(`${API_URL}/upload/upload`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: fd,
+  });
+  return res.json();
+}
+
+export async function summarize(document_id, language, token) {
+  const res = await fetch(`${API_URL}/summarize/`, {
+    method: "POST",
+    headers: {
+      "Content-Type":"application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ document_id, language }),
+  });
+  return res.json();
+}
+
+export async function newChatSession(token) {
+  const res = await fetch(`${API_URL}/chat/new`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.json();
+}
+
+export async function sendChatMessage(session_id, message, context_doc_id, language, token) {
+  const res = await fetch(`${API_URL}/chat/message`, {
+    method: "POST",
+    headers: {
+      "Content-Type":"application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ session_id, message, context_doc_id, language }),
+  });
+  return res.json();
+}
+
+frontend/src/components/FileUpload.jsx
+// FileUpload.jsx
+import React, { useState } from "react";
+import { uploadFile, summarize } from "../api";
+
+export default function FileUpload({ token }) {
+  const [file, setFile] = useState(null);
+  const [docId, setDocId] = useState(null);
+  const [preview, setPreview] = useState("");
+  const [summary, setSummary] = useState("");
+  const [language, setLanguage] = useState("en");
+
+  async function handleUpload(e) {
+    e.preventDefault();
+    if (!file) return alert("Choose a file");
+    const res = await uploadFile(file, token, language);
+    if (res.status !== "ok") return alert("Upload failed: "+JSON.stringify(res));
+    setDocId(res.document_id);
+    setPreview(res.extracted_text_preview || "");
+    // auto-summarize after upload
+    const s = await summarize(res.document_id, language, token);
+    setSummary(s.summary || s);
+  }
+
+  function handleDownloadSummary() {
+    if (!summary) return alert("No summary to download");
+    const blob = new Blob([summary], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `summary_doc_${docId || "unknown"}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  return (
+    <div className="p-4">
+      <form onSubmit={handleUpload}>
+        <input type="file" onChange={(e) => setFile(e.target.files[0])} />
+        <select value={language} onChange={(e)=> setLanguage(e.target.value)}>
+          <option value="en">English</option>
+          <option value="kn">Kannada</option>
+          <option value="hi">Hindi</option>
+          {/* add more options */}
+        </select>
+        <button type="submit">Upload & Analyze</button>
+      </form>
+
+      {preview && <div><h3>Extracted preview</h3><pre style={{whiteSpace:"pre-wrap"}}>{preview}</pre></div>}
+      {summary && <div>
+        <h3>Summary</h3>
+        <pre style={{whiteSpace:"pre-wrap"}}>{summary}</pre>
+        <button onClick={handleDownloadSummary}>Download Summary</button>
+      </div>}
+    </div>
+  );
+}
+
+frontend/src/components/Chatbot.jsx
+// Chatbot.jsx
+import React, { useState } from "react";
+import { newChatSession, sendChatMessage } from "../api";
+
+export default function Chatbot({ token, contextDocId }) {
+  const [open, setOpen] = useState(false);
+  const [sessionId, setSessionId] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState("");
+  const [language, setLanguage] = useState("en");
+
+  async function startNewConversation() {
+    const res = await newChatSession(token);
+    setSessionId(res.session_id);
+    setMessages([]);
+    setOpen(true);
+  }
+
+  async function sendMessage() {
+    if (!sessionId) return alert("Start a new conversation first");
+    const res = await sendChatMessage(sessionId, input, contextDocId, language, token);
+    setMessages(prev => [...prev, {role:"user", content: input}, {role:"bot", content: res.reply}]);
+    setInput("");
+  }
+
+  return (
+    <>
+      <button onClick={() => setOpen(!open)} style={{position:"fixed", right:20, bottom:20}}>Chat</button>
+      {open && (
+        <div style={{position:"fixed", right:20, bottom:70, width:350, height:400, background:"white", border:"1px solid #ddd", padding:8}}>
+          <div>
+            <button onClick={startNewConversation}>Start new conversation</button>
+            <select value={language} onChange={(e)=> setLanguage(e.target.value)}>
+              <option value="en">English</option>
+              <option value="kn">Kannada</option>
+            </select>
+          </div>
+          <div style={{height:260, overflowY:"auto", border:"1px solid #eee", marginTop:8, padding:4}}>
+            {messages.map((m, i) => <div key={i}><b>{m.role}</b>: <div>{m.content}</div></div>)}
+          </div>
+          <div style={{display:"flex", gap:8, marginTop:8}}>
+            <input style={{flex:1}} value={input} onChange={(e)=>setInput(e.target.value)} />
+            <button onClick={sendMessage}>Send</button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}

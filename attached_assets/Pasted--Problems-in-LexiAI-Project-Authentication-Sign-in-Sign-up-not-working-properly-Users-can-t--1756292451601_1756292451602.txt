@@ -1,0 +1,94 @@
+🔴 Problems in LexiAI Project
+
+Authentication (Sign in / Sign up) not working properly
+
+Users can’t register or log in.
+
+Sessions aren’t being maintained.
+
+File Upload Issues
+
+When you upload a document (PDF, DOCX, TXT), it doesn’t process correctly.
+
+The analysis shows same dummy text for every file.
+
+Analysis Feature Broken
+
+AI isn’t reading the actual uploaded document.
+
+Shows fixed/dummy response instead of real insights.
+
+Download Not Working
+
+After analyzing, the PDF download button does not download the report.
+
+Button Actions Not Responding
+
+“Check AI Assistant with this Analysis” button is not clickable / no functionality linked.
+
+Multilingual Support Missing
+
+Even though you tried, it only works in English.
+
+Non-English documents (Hindi, Kannada, Urdu, etc.) aren’t being processed properly.
+
+UI/UX Flow Broken
+
+No proper user feedback (e.g., “file uploaded successfully”, “analysis in progress”).
+
+Buttons look active but don’t trigger backend functions.
+
+🟢 Solutions for Each Problem
+1. Fix Authentication
+
+Use a proper Auth system (Firebase Auth or Supabase Auth).
+
+Store users in DB with email + password.
+
+Maintain session with JWT tokens.
+
+2. Fix File Upload
+
+Use a proper file storage system (Cloudinary, Supabase storage, or local uploads/).
+
+Backend should parse PDF/DOCX using libraries like:
+
+PyPDF2 or pdfplumber → for PDF
+
+docx → for Word files
+
+langchain.document_loaders (for multi-format support).
+
+3. Real Analysis Instead of Dummy Text
+
+Connect uploaded file → extract text → send to LLM API (OpenAI, Gemini, etc.).
+
+Example: analyze_document(text, language) and return structured insights.
+
+4. Fix PDF Download
+
+After analysis → generate PDF report using reportlab or pdfkit.
+
+Provide proper download endpoint → frontend fetches and triggers download.
+
+5. Fix Button Actions
+
+Ensure frontend button → triggers API call → backend returns response.
+
+Add onClick event with API integration.
+
+6. Multilingual Support
+
+Use translation API (Google Translate API, DeepL API, or OpenAI translation prompt).
+
+Detect document language automatically → process → return analysis in that language.
+
+Add language selector in UI.
+
+7. Improve UI/UX Flow
+
+Add progress indicators (e.g., “Uploading…”, “Analyzing… please wait”).
+
+Show error messages if upload/analysis fails.
+
+Make buttons disabled until action is possible.

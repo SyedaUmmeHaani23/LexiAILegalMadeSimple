@@ -1,0 +1,186 @@
+Title:
+LexiAI – Generative AI Legal Assistant (Multilingual + Document Summarizer + Chatbot)
+
+One-line:
+Full-stack MVP: upload legal docs, OCR & extract text, generate plain-language legal summaries, and chat — full multilingual UI (40+ languages) and chatbot available on every page.
+
+Project Goals / Acceptance Criteria
+
+Build a production-ready MVP with:
+
+File upload (PDF, DOCX, images, scanned docs) → robust extraction (text + OCR fallback).
+
+Legal analysis: clause extraction, simplified explanation, obligations, risk highlights, summary.
+
+Chatbot available on every page — supports multi-session, “Start new conversation” resets chat, uses document context.
+
+Full multilingual UI (40+ languages) using i18next (or equivalent). When user switches language everything changes: UI strings, fonts (where needed), AI responses, OCR language selection, and any text inside generated images.
+
+Frontend: React + TailwindCSS + Framer Motion; bright, modern, responsive design.
+
+Backend: FastAPI (Python) or Node.js/Express with endpoints /upload, /summarize, /chat. Multi-user and session-aware.
+
+Secure: use environment variables for all API/secret keys.
+
+Deliverable: working app that can be run locally and deployed to Netlify (frontend) + Render/other (backend). Include README with build/deploy steps and automated tests for critical flows.
+
+Features (detailed)
+
+Upload: drag & drop + file picker; preview uploaded file; page showing extracted text and summarized highlights.
+
+OCR: Tesseract fallback for scanned images; support OCR in selected UI language.
+
+AI: calls to a configurable LLM (use environment variable LLM_API_KEY + LLM_PROVIDER); responses must be in currently selected language.
+
+i18n: language selector with at least these languages preconfigured — English, Kannada, Hindi, Tamil, Telugu, Spanish, French, German, Chinese (Simplified), Korean, Japanese, Arabic — plus placeholders for 30+ others. JSON locale files in frontend/src/locales/.
+
+Chatbot: floating icon component on every page; open chat modal; "Start new conversation" clears history and starts a new session_id; chat context includes references to uploaded docs.
+
+Reports: export/download report as PDF/JSON with document summary, extracted clauses, and Q&A transcript.
+
+Auth (optional MVP): simple email sign-in or anonymous sessions; must support session isolation.
+
+Project Structure (exact)
+LexiAI/
+├── backend/
+│   ├── app/
+│   │   ├── main.py                # FastAPI app entry
+│   │   ├── routes/
+│   │   │   ├── upload.py
+│   │   │   ├── summarize.py
+│   │   │   └── chat.py
+│   │   ├── services/
+│   │   │   ├── ocr_service.py
+│   │   │   ├── llm_service.py
+│   │   │   └── translator_service.py
+│   │   └── models.py
+│   ├── requirements.txt
+│   └── Dockerfile
+├── frontend/
+│   ├── public/
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── FileUpload.jsx
+│   │   │   ├── Chatbot.jsx
+│   │   │   └── LanguageSwitcher.jsx
+│   │   ├── pages/
+│   │   │   ├── Home.jsx
+│   │   │   ├── Dashboard.jsx
+│   │   │   └── Report.jsx
+│   │   ├── locales/
+│   │   │   ├── en.json
+│   │   │   ├── kn.json
+│   │   │   ├── hi.json
+│   │   │   └── ...others.json
+│   │   ├── i18n.js
+│   │   ├── App.jsx
+│   │   └── index.js
+│   ├── package.json
+│   └── tailwind.config.js
+├── .replit
+├── docker-compose.yml
+└── README.md
+
+Important file snippets (copy-paste friendly)
+
+backend/requirements.txt
+
+fastapi
+uvicorn[standard]
+python-multipart
+pytesseract
+Pillow
+PyMuPDF
+python-docx
+requests
+pydantic
+python-dotenv
+gunicorn
+
+
+backend/app/main.py (skeleton)
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from app.routes import upload, summarize, chat
+
+app = FastAPI(title="LexiAI Backend")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # set proper origins in production
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(upload.router, prefix="/upload")
+app.include_router(summarize.router, prefix="/summarize")
+app.include_router(chat.router, prefix="/chat")
+
+
+frontend/package.json (scripts)
+
+{
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test --env=jsdom",
+    "eject": "react-scripts eject"
+  }
+}
+
+
+.replit (for running backend during dev)
+
+run = "bash -lc 'cd backend && uvicorn app.main:app --host 0.0.0.0 --port 3000'"
+
+i18n sample (frontend/src/locales/kn.json)
+{
+  "upload": "ದಸ್ತಾವೇಜನ್ನು ಅಪ್‌ಲೋಡ್ ಮಾಡಿ",
+  "summarize": "ಸಂಕ್ಷೇಪ ಮಾಡಿ",
+  "chat_with_lexi": "ಲೆಕ್ಸಿ‌ಎಐ ಜತೆ ಚಾಟ್ ಮಾಡಿ",
+  "start_new_conversation": "ಹೊಸ ಸಂಭಾಷಣೆ ಪ್ರಾರಂಭಿಸಿ"
+}
+
+
+Make sure i18n.js loads these files and exposes t('upload') etc.
+
+API Contracts (brief)
+POST /upload
+
+Accept: multipart form file
+
+Returns:
+
+{
+  "status": "ok",
+  "text": "full extracted text",
+  "pages": 5,
+  "ocr_used": true
+}
+
+POST /summarize
+
+Accept JSON: { "text": "...", "language": "kn", "max_len": 400 }
+
+Returns: { "summary": "...", "highlights": [...], "risk_score": 0.23 }
+
+POST /chat
+
+Accept JSON: { "session_id": "...", "message": "...", "context_docs": ["docid1"], "language": "kn" }
+
+Returns: { "session_id": "...", "reply": "..." }
+
+Environment variables (required)
+
+LLM_PROVIDER — e.g., openai, azure, or custom
+
+LLM_API_KEY
+
+OCR_TESSDATA_PREFIX (if custom Tesseract path)
+
+FRONTEND_BASE_URL (for CORS)
+
+BACKEND_URL (frontend build-time config)
+
+NODE_ENV / PYTHON_ENV

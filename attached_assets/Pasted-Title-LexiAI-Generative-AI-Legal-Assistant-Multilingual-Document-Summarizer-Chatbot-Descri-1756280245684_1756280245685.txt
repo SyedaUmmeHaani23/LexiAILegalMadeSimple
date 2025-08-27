@@ -1,0 +1,80 @@
+Title:
+LexiAI – Generative AI Legal Assistant (Multilingual + Document Summarizer + Chatbot)
+
+Description / Prompt:
+
+Build me a full-stack web app called LexiAI – Legal Made Simple, which allows users to:
+
+Upload Legal Documents (PDF, DOCX, Images, Scanned Docs)
+
+Extract text from PDFs and Word files.
+
+If the document is scanned or contains images, use OCR (Tesseract) to extract text.
+
+Process and summarize legal content using a Generative AI model.
+
+Provide simplified explanations of clauses, obligations, risks, and summaries.
+
+Multilingual Support (40+ Languages)
+
+Use i18next (or any internationalization library) to handle dynamic translation of the full interface.
+
+All UI (buttons, text, menus) and all AI-generated responses should switch automatically when a user selects a language.
+
+Include major languages: English, Kannada, Hindi, Tamil, Telugu, Spanish, French, German, Chinese, Korean, Japanese, Arabic, etc.
+
+Text inside uploaded images should also be extracted in the chosen language (use OCR with language options).
+
+Chatbot (available on every page)
+
+Floating chatbot icon on all pages.
+
+When clicked, it opens a chat window.
+
+“Start new conversation” should reset the conversation history and begin fresh.
+
+Chatbot should understand uploaded document context + user queries.
+
+AI responses should always be in the currently selected language.
+
+Frontend Requirements
+
+Use React + TailwindCSS for a modern UI.
+
+Bright aesthetic color palette with professional design.
+
+Smooth animations with Framer Motion.
+
+Responsive layout for mobile + desktop.
+
+Backend Requirements
+
+Use FastAPI (Python) or Node.js Express as backend.
+
+Endpoints:
+
+/upload → handle file uploads, extract text, return content.
+
+/summarize → call AI model to generate summaries/explanations.
+
+/chat → chatbot conversation endpoint (multi-session supported).
+
+Store chats with a session_id.
+
+Other Features
+
+Save and download document analysis reports.
+
+Support multiple concurrent users.
+
+Secure with environment variables for API keys.
+
+⚡ Deliverable: A complete working MVP with:
+
+File Upload + Legal Summarization
+
+Multilingual Full Interface (40+ languages)
+
+Chatbot integrated across all pages
+
+Bright and modern UI/UX

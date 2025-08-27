@@ -1,0 +1,89 @@
+and also when i change language only the head part is changing like just options not the entire thing in that language and chinese spanish korean and many languages are not working make it run all languages listed
+ChatGPT said:
+
+Got it ✅
+So you have two big issues in your LexiAI project right now:
+
+🛑 Problem 1 – Document Upload
+
+PDFs fail with Failed to parse PDF file.
+
+Dummy text shows up instead of real extracted content.
+
+Solution:
+
+Use multi-layer parsing (pypdf → pdfplumber → OCR).
+
+Handle DOCX via python-docx.
+
+TXT via normal read.
+
+Add proper error messages (e.g., if password-protected).
+
+Save file before parsing, not directly in memory (fixes Replit buffer issue).
+
+🛑 Problem 2 – Multilingual Support
+
+Only the header text changes when switching languages.
+
+The rest of the app (summaries, chatbot responses, button labels, etc.) remain in English.
+
+Chinese, Spanish, Korean, etc. are broken because translations are missing.
+
+Solution:
+
+Use i18next with JSON translation files (/locales/en.json, /locales/es.json, /locales/zh.json, /locales/ko.json, etc.).
+
+Store all UI strings in these files, not hardcoded in JSX.
+
+Example:
+
+{
+  "upload_button": "Upload Document",
+  "analyze_button": "Analyze",
+  "chat_with_ai": "Chat with AI"
+}
+
+
+On language switch:
+
+Reload translations dynamically.
+
+Change both UI + AI responses into the chosen language.
+
+AI calls must include a language parameter so the model always responds in the selected language.
+
+OCR (Tesseract) should also run in the chosen language.
+Example for Chinese OCR:
+
+pytesseract.image_to_string(img, lang="chi_sim")
+
+
+For Korean:
+
+pytesseract.image_to_string(img, lang="kor")
+
+
+Pre-load 40+ language packs in i18next config.
+
+✅ Replit Prompt to Fix This
+
+Fix LexiAI multilingual support and document upload:
+
+1. Implement robust document parsing:
+   - PDF: pypdf → pdfplumber → fallback OCR (Tesseract).
+   - DOCX: python-docx.
+   - TXT: UTF-8 read.
+   - Add error handling for password-protected/invalid files.
+   - Always return real extracted text (not dummy data).
+
+2. Multilingual support:
+   - Use i18next with JSON translation files for 40+ languages.
+   - Store ALL UI text in translation files (not hardcoded).
+   - When language is switched, translate the entire UI + AI outputs + chatbot + download reports.
+   - Make AI backend always respond in the selected language.
+   - Configure OCR to extract text in the selected language.
+
+3. Ensure chatbot button (“Check AI Assistant with this Analysis”) is clickable and starts conversation with correct session.
+4. Ensure document analysis reports can be downloaded in any language.
+5. Add missing translations for Chinese, Korean, Spanish, Arabic, etc.

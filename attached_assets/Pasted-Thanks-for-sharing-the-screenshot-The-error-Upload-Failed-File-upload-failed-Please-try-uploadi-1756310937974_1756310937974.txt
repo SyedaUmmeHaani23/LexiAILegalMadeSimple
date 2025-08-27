@@ -1,0 +1,88 @@
+Thanks for sharing the screenshot ✅
+
+The error Upload Failed: File upload failed. Please try uploading the document again. usually happens because of backend misconfiguration or file handling issues. Let’s debug step by step:
+
+🔎 Common Reasons & Fixes
+1. Backend not accepting file
+
+Your frontend is likely sending the file, but the backend isn’t processing it.
+
+If using Express.js, you must have multer (for file uploads).
+
+Example:
+
+import express from "express";
+import multer from "multer";
+
+const app = express();
+const upload = multer({ dest: "uploads/" }); // saves file in uploads folder
+
+app.post("/upload", upload.single("file"), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: "No file uploaded" });
+  }
+  res.json({ message: "File uploaded successfully", file: req.file });
+});
+
+
+⚠️ If this route is missing or not linked → upload will always fail.
+
+2. Frontend not sending file properly
+
+When uploading, ensure you’re sending as FormData:
+
+const formData = new FormData();
+formData.append("file", selectedFile);
+
+fetch("http://localhost:5000/upload", {
+  method: "POST",
+  body: formData
+})
+.then(res => res.json())
+.then(data => console.log(data))
+.catch(err => console.error(err));
+
+
+If instead you try to JSON.stringify the file → ❌ it will fail.
+
+3. CORS issue
+
+If your frontend (Vercel/Netlify) and backend (Replit/Render/etc.) are on different domains, you must enable CORS.
+
+Example in Express:
+
+import cors from "cors";
+app.use(cors());
+
+4. File size limit
+
+By default, some servers block large files (>1MB).
+Set higher file size limit:
+
+const upload = multer({
+  limits: { fileSize: 10 * 1024 * 1024 } // 10MB
+});
+
+5. Storage location issue
+
+If deployed on Vercel → direct file storage won’t work (Vercel is serverless, no permanent disk).
+✅ Solution: Use cloud storage (Firebase Storage, AWS S3, or Supabase).
+Workflow:
+
+Frontend uploads → Cloud storage (S3/Firebase).
+
+Cloud storage → returns file URL.
+
+Send URL → backend → analyze file with AI.
+
+⚡ Recommended Fix for Your Case
+
+Since you’re building AI Legal Doc Analyzer, the best approach:
+
+Upload file → Firebase Storage / S3.
+
+Get file URL.
+
+Backend extracts text (pdf-parse, mammoth, etc.).
+
+Send text to OpenAI for analysis.

@@ -1,0 +1,80 @@
+"Build a fully functional web application called LexiAI – Legal Made Simple, developed by Syeda Umme Haani. The app should simplify legal documents using AI and provide an intuitive, professional interface. It should be production-ready with a clean codebase, authentication system, chatbot, and full MVP + core features. Use Next.js (React + Tailwind CSS) for frontend, Node.js with Express for backend, and MongoDB or PostgreSQL as the database.
+
+🔹 Features to Implement
+Authentication (Auth System):
+
+Secure Sign Up / Login / Logout / Password Reset.
+
+JWT-based authentication.
+
+Password hashing with bcrypt.
+
+User Dashboard (After Login):
+
+Upload legal documents (PDF/Word).
+
+Document history for logged-in users.
+
+AI-generated simplified summaries.
+
+Color-coded highlights:
+
+🟢 Obligations
+
+🔴 Risks/Penalties
+
+🟡 Deadlines
+
+Clause-by-Clause Explanation:
+
+Click on any clause → AI gives a plain-language explanation.
+
+Provide actionable guidance: “What this means for you.”
+
+AI-Powered Q&A Chatbot (Developed by Syeda Umme Haani):
+
+Dedicated chatbot page.
+
+Chat interface (like ChatGPT).
+
+Users can ask: “Do I need to pay penalty if I leave early?”
+
+AI answers based on uploaded document context.
+
+Chatbot should display: “Developed by Syeda Umme Haani | Contact: +91 7204409926 | Email: syedaummehaani23@gmail.com
+” at the footer.
+
+Glossary Mode:
+
+Common legal terms simplified (e.g., “Indemnity → Protection against loss”).
+
+Additional Features:
+
+Document comparison (highlight differences).
+
+Multi-language support (English + Indian regional languages).
+
+Voice output option (AI reads simplified clauses aloud).
+
+🔹 UI/UX Design Requirements
+
+Modern Google Material-inspired design.
+
+Tailwind CSS for styling (rounded corners, card UI, shadows).
+
+Responsive for desktop and mobile.
+
+Color palette:
+
+Blue (Trust)
+
+Green (Safe)
+
+Red (Risk)
+
+Yellow (Deadlines)
+
+Navbar: Home | Upload | Dashboard | Chatbot | Glossary | Profile | Logout.
+
+Footer: “Developed by Syeda Umme Haani | Contact: 7204409926 | Email: syedaummehaani23@gmail.com
+”.
